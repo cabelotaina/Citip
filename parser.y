@@ -37,17 +37,27 @@
 %token <int>            SIGN
                         REL
 
-%type <ast::Relation>               inform_inequ
-%type <ast::VarCore>                mutual_indep
-%type <ast::VarCore>                markov_chain
-%type <ast::FunctionOf>             determ_depen
-%type <ast::Expression>             inform_expr
-%type <ast::Term>                   inform_term
-%type <ast::Quantity>               inform_quant
-%type <ast::Quantity>               entropy
-%type <ast::Quantity>               mutual_inf
-%type <ast::VarList>                var_list
-%type <ast::VarCore>                mut_inf_core;
+%type <ast::PROGRAM>                ExecutableProgram
+%type <ast::SUBROUTINE>             Subroutine
+%type <ast::FUNCTION>               Function
+%type <ast::STOP>                   MainProgramSuffix?
+%type <ast::RETURN>                 Return?
+%type <ast::END>                    End?
+%type <ast::PARAMETER>              ParameterStatement
+%type <ast::INTEGER>                Integer
+%type <ast::REAL>                   Real
+%type <ast::CYCLE>                  CycleStatement
+%type <ast::EXIT>                   ExitStatement
+%type <ast::IF>                     IfConstruct
+%type <ast::ELSE>                   ElseConstruct
+%type <ast::ELSEIF>                 ElseIfConstruct
+%type <ast::ENDIF>                  EndIfStatement
+%type <ast::WHILE>                  WhileConstruct
+%type <ast::DO>                     DoConstruct
+%type <ast::ENDDO>                  EndDoStatement
+%type <ast::PRINT>                  PrintStatement
+%type <ast::READ>                   ReadStatement
+%type <ast::CALL>                   CallStatement
 
 %start statement
 
@@ -94,67 +104,260 @@
     }
 }
 %%
-
-    /* deliver output */
-
-statement    : %empty           { /* allow empty (or pure comment) lines */ }
-             | inform_inequ     { cb->relation(move($1)); }
-             | mutual_indep     { cb->mutual_independence(move($1)); }
-             | markov_chain     { cb->markov_chain(move($1)); }
-             | determ_depen     { cb->function_of(move($1)); }
-             ;
-
     /* statements */
 
-inform_inequ : inform_expr REL inform_expr       { $$ = {$1, $2, $3}; }
-             ;
+ExecutableProgram        : MainProgram
+                         | ExecutableProgram Subprogram
+                         ;
 
-markov_chain : markov_chain '/' var_list               { $$ = enlist($1, $3); }
-             |     var_list '/' var_list '/' var_list  { $$ = {$1, $3, $5}; }
-             ;
+Subprogram               : Subroutine
+                         | Function
+                         ;
 
-mutual_indep : mutual_indep '.' var_list         { $$ = enlist($1, $3); }
-             |     var_list '.' var_list         { $$ = {$1, $3}; }
-             ;
+MainProgram              : MainProgramPrefix Body MainProgramSuffix
+                         ;
 
-determ_depen : var_list ':' var_list             { $$ = {$1, $3}; }
-             ;
+Subroutine               : SubroutinePrefix "(" ParameterList ")" Body SubroutineSuffix
+                         ;
 
-    /* building blocks */
+Function                 : FunctionPrefix "(" ParameterList ")" Body FunctionSuffix
+                         ;
 
-inform_expr  : inform_expr SIGN inform_term     { $$ = enlist($1, $3.flip_sign($2)); }
-             |             SIGN inform_term     { $$ = {$2.flip_sign($1)}; }
-             |                  inform_term     { $$ = {$1}; }
-             ;
+MainProgramPrefix        : "PROGRAM" Name
+                         ;
 
-inform_term  : NUM inform_quant                 { $$ = {$1, $2}; }
-             |     inform_quant                 { $$ = { 1, $1}; }
-             | NUM                              { $$ = {$1}; }
-             ;
+MainProgramSuffix        : "STOP" "END"
+                         ;
 
-inform_quant : entropy                          { $$ = $1; }
-             | mutual_inf                       { $$ = $1; }
-             ;
+SubroutinePrefix         : "SUBROUTINE" Name
+                         ;
 
-entropy      : 'H' '(' var_list              ')'      { $$ = {{$3}}; }
-             | 'H' '(' var_list '|' var_list ')'      { $$ = {{$3}, $5}; }
-             ;
+SubroutineSuffix         : "RETURN" "END"
+                         ;
 
-mutual_inf   : 'I' '(' mut_inf_core              ')'  { $$ = {{$3}}; }
-             | 'I' '(' mut_inf_core '|' var_list ')'  { $$ = {{$3}, $5}; }
-             ;
+FunctionPrefix           : Type "FUNCTION" Name
+                         ;
 
-mut_inf_core :  mut_inf_core colon var_list     { $$ = enlist($1, $3); }
-             |      var_list colon var_list     { $$ = {$1, $3}; }
-             ;
+FunctionSuffix           : "RETURN" "END"
+                         ;
 
-colon        : ':'
-             | ';'
-             ;
+Name                     : Letter
+                         | Name Letter
+                         ;
 
-var_list     : var_list ',' NAME                { $$ = enlist($1, $3); }
-             |              NAME                { $$ = {$1}; }
-             ;
+Letter                   : [a-zA-Z]
+                         ;
+
+Body                     : BodyConstruct
+                         | Body BodyConstruct
+                         ;
+
+BodyConstruct            : SpecificationConstruct
+                         | ExecutableConstruct
+                         ;
+
+SpecificationConstruct              : DeclarationConstruct
+                         | ParameterStatement
+                         ;
+
+DeclarationConstruct                : Declaration
+                         | DeclarationConstruct Declaration
+                         ;
+
+Declaration              : Type IdentifierDeclarationList
+
+Type                     : "INTEGER"
+                         | "REAL"
+                         | "CHARACTER"
+                         | "LOGICAL"
+                         ;
+
+IdentifierDeclarationList: IdentifierDeclaration
+                         | IdentifierDeclarationList "," IdentifierDeclaration
+                         ;
+
+IdentifierDeclaration    : Identifier
+                         | Identifier "(" Integer ")"
+                         ;
+
+Identifier               : Letter
+                         | Identifier Alphanumeric
+                         ;
+
+Alphanumeric                : Letter
+                         | Digit
+                         ;
+
+Digit                    : [0-9]
+                         ;
+
+ParameterStatement       : "PARAMETER" "(" ConstantList ")"
+                         ;
+
+ConstantList             : ConstantDefinition
+                         | ConstantList "," ConstantDefinition
+                         ;
+
+ConstantDefinition       : Identifier "=" ConstantExpression
+                         ;
+
+ConstantExpression       : Number
+                         | StringLiteral
+                         ;
+
+ExecutableConstruct      : Statement
+                         | ExecutableConstruct Statement
+                         ;
+
+Statement                : AssignmentStatement
+                         | PrintStatement
+                         | ReadStatement
+                         | IfConstruct
+                         | DoConstruct
+                         | WhileConstruct
+                         | CallStatement
+                         | CycleStatement
+                         | ExitStatement
+                         ;
+
+AssignmentStatement      : Identifier "=" Expression
+                         | Identifier "(" Integer ")" "=" Expression
+                         ;
+
+Expression               : Factor
+                         | Expression "+" Factor
+                         | Expression "-" Factor
+                         ;
+
+Factor                   : Term
+                         | Factor "*" Term
+                         | Factor "/" Term
+                         ;
+
+Term                     : "(" Expression ")"
+                         | Identifier "(" ExpressionList ")"
+                         | Identifier "(" ")"
+                         | Identifier
+                         | Number
+                         | "-" Term
+                         ;
+
+ExpressionList           : Expression
+                         | ExpressionList "," Expression
+                         ;
+
+Number                   : Integer
+                         | Real
+                         ;
+
+Integer                  : Digit
+                         | Integer Digit
+                         ;
+
+Real                     : Integer '.' Integer
+                         | Integer '.'
+                         | '.' Integer 
+                         ;
+
+PrintStatement           : "PRINT" PrintList
+                         ;
+
+PrintList                : PrintItem
+                         | PrintList "," PrintItem
+                         ;
+
+PrintItem                : StringLiteral
+                         | Expression
+                         ;
+
+StringLiteral            : "'' Text "''
+                         ;
+
+Text                     : TextChar
+                         | TextChar Text
+                         ;
+
+TextChar                 : [\x20-\x26]
+                         | [\x28-\x7E]
+                         | [\xA]
+                         ;
+
+ReadStatement            : "READ" IdentifierList
+                         ;
+
+IfConstruct              : IfThenStatement ThenConstruct
+                         ;
+
+IfThenStatement          : "IF" LogicalExpression "THEN"
+                         ;
+
+ThenConstruct            : Statement EndIfStatement
+                         | Statement ElseIfConstruct
+                         | Statement ElseConstruct
+                         ;
+
+EndIFStatement           : "ENDIF"
+                         ;
+
+ElseIfConstruct          : ElseIfStatement ThenConstruct
+                         ;
+
+ElseIfStatement          : "ELSEIF" Expression "THEN"
+                         ;
+
+ElseConstruct            : "ELSE" Expression "END"
+                         ;
+
+LogicalExpression        : Expression Op Expression
+                         | LogicalConstant
+                         ;
+
+Op                       : ".AND."
+                         | ".OR."
+                         | ".EQ."
+                         | ".NE."
+                         | ".GT."
+                         | ".GE."
+                         | ".LT."
+                         | ".LE."
+                         ;
+
+LogicalConstant          : ".TRUE."
+                         | ".FALSE."
+                         ;
+
+DoConstruct              : DoStatement DoLoopControl EndDoStatement
+                         ;
+
+DoStatement              : "DO"
+                         ;
+
+DoLoopControl            : Identifier "=" Expression "," Expression
+                         | Identifier "=" Expression "," Expression "," Expression
+                         ;
+
+EndDoStatement           : Statement "ENDDO"
+                         ;
+
+WhileConstruct           : WhileStatement EndWhileStatement
+                         ;
+
+WhileStatement           : "WHILE" LogicalExpression "DO"
+                         ;
+
+EndWhileStatement        : Statement "ENDDO"
+                         ;
+
+CallStatement            : "CALL" Name "(" IdentifierList ")"
+                         | "CALL" Name "(" ")"
+                         ;
+
+CycleStatement           : "CONTINUE"
+                         ;
+
+ExitStatement            : "EXIT"
+                         ;
+
 
 %%
 
