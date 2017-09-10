@@ -106,8 +106,8 @@ CALL                                                INT_TOKEN(SIGN, ast::CALL)
 ".TRUE."                                            INT_TOKEN(SIGN, ast::BOOL_TRUE)
 ".FALSE."                                           INT_TOKEN(SIGN, ast::BOOL_FALSE)
 ","                                                 INT_TOKEN(SIGN, ast::COMMA)
-\(                                                 INT_TOKEN(SIGN, ast::LP)
-\)                                                 INT_TOKEN(SIGN, ast::RP)
+\(                                                  INT_TOKEN(SIGN, ast::LP)
+\)                                                  INT_TOKEN(SIGN, ast::RP)
 
 %%
 
