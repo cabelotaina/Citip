@@ -5,7 +5,7 @@
 
     For those who are new to flex/bison:
 
-    This file is transpiled (using 'flex scanner.l') to a .cpp source file
+    This file is transpiled (uSIGN 'flex scanner.l') to a .cpp source file
     which implements a tokenizer function that returns on each call the
     integer tag of a token and stores additional information into its output
     parameters. The function declaration looks as follows:
@@ -54,31 +54,60 @@
     yylloc->step();
 %}
 
- /* do not treat 'I' or 'H' as identifiers if followed by '(' */
-I/\(                        LITERAL
-H/\(                        LITERAL
 
-[[:alpha:]][[:alnum:]_]*    STR_TOKEN(NAME)
+[[:alpha:]]                                         LITERAL
+[[:digit:]]                                         NUM_TOKEN(NUM)
+[-+]?([0-9]*\.?[0-9]+|[0-9]+\.)([E]?[-+]?[0-9]+)?   NUM_TOKEN(NUM)
+[[:alpha:]]([[:alpha:]]|[0-9]|_)*                   STR_TOKEN(NAME)                                           
+\'([^\\\']|\\.)*\'                                  LITERAL
+"//".*                                              {/* eat comments */}
+[ \t]                                               {/* eat whitespace */}
 
-[[:digit:]]+                NUM_TOKEN(NUM)
-[[:digit:]]*\.[[:digit:]]+  NUM_TOKEN(NUM)
+\n                                                  yylloc->lines(1); LITERAL
 
-\+                          INT_TOKEN(SIGN, ast::SIGN_PLUS)
-\-                          INT_TOKEN(SIGN, ast::SIGN_MINUS)
+                                                    /* forward everything else, even invalid
+                                                     * tokens - making use of bison's automatic
+                                                     * error messages */
+.                                                   LITERAL
 
-==?                         INT_TOKEN(REL, ast::REL_EQ)
-\<=                         INT_TOKEN(REL, ast::REL_LE)
-\>=                         INT_TOKEN(REL, ast::REL_GE)
+PROGRAM                                             INT_TOKEN(SIGN, ast::PROGRAM)      
+SUBROUTINE                                          INT_TOKEN(SIGN, ast::SUBROUTINE)
+FUNCTION                                            INT_TOKEN(SIGN, ast::FUNCTION)
+STOP                                                INT_TOKEN(SIGN, ast::STOP)
+RETURN                                              INT_TOKEN(SIGN, ast::RETURN)
+END                                                 INT_TOKEN(SIGN, ast::END)
+PARAMETER                                           INT_TOKEN(SIGN, ast::PARAMETER)
+INTEGER                                             INT_TOKEN(SIGN, ast::INTEGER)
+REAL                                                INT_TOKEN(SIGN, ast::REAL)
+CYCLE                                               INT_TOKEN(SIGN, ast::CYCLE)
+EXIT                                                INT_TOKEN(SIGN, ast::EXIT)
+IF                                                  INT_TOKEN(SIGN, ast::IF)
+ELSE                                                INT_TOKEN(SIGN, ast::ELSE)
+ELSEIF                                              INT_TOKEN(SIGN, ast::ELSEIF)
+ENDIF                                               INT_TOKEN(SIGN, ast::ENDIF)
+WHILE                                               INT_TOKEN(SIGN, ast::WHILE)
+DO                                                  INT_TOKEN(SIGN, ast::DO)
+ENDDO                                               INT_TOKEN(SIGN, ast::ENDDO)
+PRINT                                               INT_TOKEN(SIGN, ast::PRINT)
+READ                                                INT_TOKEN(SIGN, ast::READ)
+CALL                                                INT_TOKEN(SIGN, ast::CALL)
 
-#.*                         {/* eat comments */}
-[ \t]                       {/* eat whitespace */}
-
-\n                          yylloc->lines(1); LITERAL
-
-                            /* forward everything else, even invalid
-                             * tokens - making use of bison's automatic
-                             * error messages */
-.                           LITERAL
+"+"                                                 INT_TOKEN(SIGN, ast::SIGN_SUM)
+"-"                                                 INT_TOKEN(SIGN, ast::SIGN_SUB)
+"*"                                                 INT_TOKEN(SIGN, ast::SIGN_TIMES)
+"/"                                                 INT_TOKEN(SIGN, ast::SIGN_DIV)
+"="                                                 INT_TOKEN(SIGN, ast::ASSIGN)
+".EQ."                                              INT_TOKEN(SIGN, ast::REL_EQ)
+".NE."                                              INT_TOKEN(SIGN, ast::REL_NE)
+".GT."                                              INT_TOKEN(SIGN, ast::REL_GT)
+".GE."                                              INT_TOKEN(SIGN, ast::REL_GE)
+".LT."                                              INT_TOKEN(SIGN, ast::REL_LT)
+".LE."                                              INT_TOKEN(SIGN, ast::REL_LE)
+".TRUE."                                            INT_TOKEN(SIGN, ast::BOOL_TRUE)
+".FALSE."                                           INT_TOKEN(SIGN, ast::BOOL_FALSE)
+","                                                 INT_TOKEN(SIGN, ast::COMMA)
+\(                                                 INT_TOKEN(SIGN, ast::LP)
+\)                                                 INT_TOKEN(SIGN, ast::RP)
 
 %%
 

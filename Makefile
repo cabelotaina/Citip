@@ -14,7 +14,7 @@ Citip: $(OBJS)
 	g++ $(CFLAGS) -o $@ -c $< -std=c++11
 
 %.o: %.cxx
-	g++ $(CFLAGS) -o $@ -c $< -std=c++11
+	g++ $(CFLAGS) -o $@ -c $< -std=c++11 -Wno-deprecated-register
 
 parser.cxx: parser.y
 	bison -o $@ --defines=parser.hxx $<
